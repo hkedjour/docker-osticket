@@ -1,7 +1,13 @@
 # syntax=docker/dockerfile:1.3
 
-FROM php:8.1-fpm-alpine3.16
+FROM php:8.4-fpm-alpine3.24
 RUN set -ex; \
+    \
+    # Refuse to build on a PHP release vulnerable to CVE-2026-109618 / CVE-2026-109619 (PHP2Shell)
+    php -r 'exit(version_compare(PHP_VERSION, "8.4.27", ">=") ? 0 : 1);' || { \
+        echo "PHP $(php -r 'echo PHP_VERSION;') is vulnerable, 8.4.27 or later is required" >&2; \
+        exit 1; \
+    }; \
     \
     export CFLAGS="${PHP_CFLAGS:?}"; \
     export CPPFLAGS="${PHP_CPPFLAGS:?}"; \
@@ -9,7 +15,6 @@ RUN set -ex; \
     \
     # Runtime dependencies
     apk add --no-cache \
-        c-client \
         icu \
         libintl \
         libpng \
@@ -25,18 +30,17 @@ RUN set -ex; \
         ${PHPIZE_DEPS} \
         gettext-dev \
         icu-dev \
-        imap-dev \
         libpng-dev \
         libzip-dev \
+        linux-headers \
         openldap-dev \
     ; \
     \
-    # Install PHP extensions
-    docker-php-ext-configure imap --with-imap-ssl; \
+    # Install PHP extensions (imap was unbundled from PHP 8.4; osTicket 1.18 fetches mail via the
+    # bundled Laminas Mail library and only lists imap as optional)
     docker-php-ext-install -j "$(nproc)" \
         gd \
         gettext \
-        imap \
         intl \
         ldap \
         mysqli \
@@ -61,8 +65,8 @@ RUN set -ex; \
     rm -rf /tmp/pear /var/cache/apk/*
 # DO NOT FORGET TO CHECK THE LANGUAGE PACK DOWNLOAD URL BELOW
 # DO NOT FORGET TO UPDATE "image-version" FILE
-ENV OSTICKET_VERSION=1.17.5 \
-    OSTICKET_SHA256SUM=a9d64b67008c64ae2009ee8abda7354c34ff4486666f931d3012988dd6538bc9
+ENV OSTICKET_VERSION=1.18.4 \
+    OSTICKET_SHA256SUM=a4187df5f52dd41625e6b61b322245853542e12b5969a45f0a6d81f7ab8151a7
 RUN --mount=type=bind,source=utils/verify-plugin.php,target=/tmp/verify-plugin.php,readonly \
     \
     set -ex; \
@@ -84,10 +88,12 @@ v${OSTICKET_VERSION}/osTicket-v${OSTICKET_VERSION}.zip; \
     for lang in bg bn bs ca cs da de el es_AR es_ES es_MX et eu fa fi fr gl he hi hr hu id is it \
         ja ka km ko lt lv mk mn ms nl no pl pt_BR pt_PT ro ru sk sl sq sr sr_CS sv_SE sw th tr uk \
         ur_IN ur_PK vi zh_CN zh_TW; do \
-        # This URL is the same as what is used by the official osTicket Downloads page. This URL is
-        # used even for minor versions >= 14.
+        # Packs for the current minor version are preferred. Some (e.g. pt_BR) have not been
+        # published for 1.18.x yet, so fall back to the previous minor version for those.
         wget -q -O /var/www/html/include/i18n/${lang}.phar \
-            https://s3.amazonaws.com/downloads.osticket.com/lang/1.14.x/${lang}.phar; \
+            https://s3.amazonaws.com/downloads.osticket.com/lang/1.18.x/${lang}.phar \
+        || wget -q -O /var/www/html/include/i18n/${lang}.phar \
+            https://s3.amazonaws.com/downloads.osticket.com/lang/1.17.x/${lang}.phar; \
         php /tmp/verify-plugin.php "/var/www/html/include/i18n/${lang}.phar"; \
     done
 RUN set -ex; \

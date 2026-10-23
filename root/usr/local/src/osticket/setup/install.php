@@ -142,7 +142,7 @@ if ($t >= CONNECTION_TIMEOUT_SEC) {
 
 //Check database installation status
 $db_installed = false;
-echo "Connecting to database mysql://${vars['dbuser']}@${vars['dbhost']}/${vars['dbname']}\n";
+echo "Connecting to database mysql://{$vars['dbuser']}@{$vars['dbhost']}/{$vars['dbname']}\n";
 if (!db_connect($vars['dbhost'],$vars['dbuser'],$vars['dbpass']))
    err(sprintf(__('Unable to connect to MySQL server: %s'), db_connect_error()));
 elseif(explode('.', db_version()) < explode('.', $installer->getMySQLVersion()))

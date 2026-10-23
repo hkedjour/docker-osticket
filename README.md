@@ -3,7 +3,7 @@ docker-osticket
 
 # Introduction
 
-Docker image for running version 1.17 of [osTicket](http://osticket.com/).
+Docker image for running version 1.18 of [osTicket](http://osticket.com/).
 
 **Important! If upgrading from images <1.17.0, read the upgrade instructions below, as images 1.17.0
 and later have plugin-related breaking changes.**
@@ -22,7 +22,7 @@ It has a few modifications:
   * EMail support
 
 osTicket is being served by [nginx](http://wiki.nginx.org/Main) using
-[PHP-FPM](http://php-fpm.org/) with PHP 8.1.
+[PHP-FPM](http://php-fpm.org/) with PHP 8.4.
 PHP [mail](http://php.net/manual/en/function.mail.php) function is configured to use
 [msmtp](http://msmtp.sourceforge.net/) to send out-going messages.
 
@@ -74,6 +74,16 @@ Note (2): osTicket automatically redirects `http://localhost:8080/scp` to `http:
 Either serve this on port 80 or don't omit the trailing slash after `scp/`!
 
 # Upgrading
+
+## Upgrading to image tag 1.18.x
+
+Images 1.18.0 and later run on PHP 8.4 (required to get fixes for CVE-2026-109618 /
+CVE-2026-109619, as PHP 8.1 is end-of-life). The PHP `imap` extension is no longer included, as it
+was removed from PHP 8.4; osTicket 1.18 fetches email using its bundled Laminas Mail library.
+
+As with any upgrade, perform a full DB backup first, then log in as an Admin and run the osTicket
+upgrader (this image does not run it automatically). If you are upgrading from image tag 1.16.3 or
+earlier, follow the steps in the section below as well.
 
 ## Upgrading from image tag 1.16.3 or earlier
 
